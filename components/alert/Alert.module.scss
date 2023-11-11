@@ -1,0 +1,43 @@
+@import "@/app/constants.scss";
+
+@keyframes entryAnim {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.container {
+  background-color: $primaryColor;
+  border-radius: 15px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  max-width: 400px;
+  position: fixed;
+  z-index: 10001;
+  right: 30px;
+  margin-left: 30px;
+  bottom: 30px;
+  padding: 20px 30px;
+  animation: entryAnim 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  transition: 200ms ease;
+  @media (max-width: $mobileBreakpoint) {
+    top: 20px;
+    bottom: initial;
+  }
+  &:active {
+    transform: scale(0.95);
+  }
+  .message {
+    color: white;
+    font-size: 1em;
+    margin: 0;
+  }
+}
+.container__error {
+  background-color: #e25a5a;
+}
