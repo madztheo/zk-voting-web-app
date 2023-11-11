@@ -154,7 +154,7 @@ export default function Content() {
 
         let zkappPublicKeyImported = "";
         // Will fail on deployment otherwise since we don't commit the keys
-        if (process.env.NODE_ENV === "production") {
+        if (process.env.NEXT_PUBLIC_ENV === "production") {
           zkappPublicKeyImported = process.env.NEXT_PUBLIC_ZK_APP_PUBLIC_KEY!;
         } else {
           zkappPublicKeyImported = (
