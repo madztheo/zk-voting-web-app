@@ -1,28 +1,12 @@
 import {
-  Field,
   SmartContract,
   state,
   State,
   method,
-  ZkProgram,
   Struct,
   UInt32,
   Provable,
-  Circuit,
 } from 'o1js';
-
-const VoteProgram = ZkProgram({
-  name: 'vote-program',
-  publicInput: Field,
-  methods: {
-    run: {
-      privateInputs: [],
-      method(publicInput: Field) {
-        publicInput.assertEquals(Field(0));
-      },
-    },
-  },
-});
 
 class Ballot extends Struct({
   candidates: [UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32],

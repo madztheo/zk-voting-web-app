@@ -17,7 +17,7 @@ import {
 
 let proofsEnabled = false;
 
-describe('Add', () => {
+describe('Vote', () => {
   let deployerAccount: PublicKey,
     deployerKey: PrivateKey,
     senderAccount: PublicKey,
