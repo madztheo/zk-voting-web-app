@@ -1,11 +1,7 @@
 # NodeJS
 node_modules
 # build
-build/src/**.js.map
-build/src/**.d.ts
-build/src/**.test.js
-build/_hash
-build/cache.json
+build
 coverage
 
 # Editor

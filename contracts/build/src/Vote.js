@@ -7,19 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Field, SmartContract, state, State, method, ZkProgram, Struct, UInt32, Provable, } from 'o1js';
-const VoteProgram = ZkProgram({
-    name: 'vote-program',
-    publicInput: Field,
-    methods: {
-        run: {
-            privateInputs: [],
-            method(publicInput) {
-                publicInput.assertEquals(Field(0));
-            },
-        },
-    },
-});
+import { SmartContract, state, State, method, Struct, UInt32, Provable, } from 'o1js';
 class Ballot extends Struct({
     candidates: [UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32, UInt32],
 }) {
