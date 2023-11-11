@@ -11,6 +11,7 @@
   "dependencies": {
     "classnames": "^2.3.2",
     "next": "14.0.2",
+    "numeral": "^2.0.6",
     "o1js": "^0.14.1",
     "react": "^18",
     "react-dom": "^18",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/numeral": "^2.0.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",

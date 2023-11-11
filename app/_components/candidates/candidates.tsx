@@ -12,6 +12,7 @@ import stephany from "@/public/images/stephany.jpg";
 import { useState } from "react";
 import Image from "next/image";
 import { useLocalStorage } from "@/hooks";
+import numeral from "numeral";
 
 const CATS = [
   {
@@ -85,19 +86,24 @@ export default function Candidates({
             })}
             key={index}
             onClick={() => {
+              if (showResults) {
+                return;
+              }
               setSelectedIndex(index);
               onCastVote?.(index);
             }}
           >
             <div className={styles.cat__image}>
-              {showResults && (
+              {showResults && getShare(index) > 0 && (
                 <div
                   className={styles.cat__vote__mask}
                   style={{
                     height: `${getShare(index)}%`,
                   }}
                 >
-                  <p className={styles.cat__vote__value}>{getShare(index)}%</p>
+                  <p className={styles.cat__vote__value}>
+                    {numeral(getShare(index)).format("0")}%
+                  </p>
                 </div>
               )}
               <Image

@@ -43,7 +43,6 @@
         .cat__vote__mask {
           position: absolute;
           z-index: 2;
-          top: 0;
           left: 0;
           right: 0;
           bottom: 0;
@@ -51,7 +50,7 @@
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
-          background-color: change-color($color: $secondaryColor, $alpha: 0.7);
+          background-color: change-color($color: $secondaryColor, $alpha: 0.8);
           .cat__vote__value {
             font-size: 1.1rem;
             font-weight: 700;
