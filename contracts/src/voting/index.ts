@@ -1,8 +1,8 @@
-export { SettlementContract } from './contract';
+export { SettlementContract } from './contract.js';
 
-export * from './vote_aggregator/sequencer';
-export * from './vote_aggregator/lib';
-export * from './vote_aggregator/prover';
+//export * from './vote_aggregator/sequencer';
+export * from './vote_aggregator/lib.js';
+export * from './vote_aggregator/prover.js';
 
 const Test = '';
 export { Test };

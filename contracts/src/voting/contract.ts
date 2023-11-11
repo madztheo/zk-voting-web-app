@@ -9,12 +9,12 @@ import {
   UInt32,
   ZkProgram,
 } from 'o1js';
-import { Prover } from './vote_aggregator/prover';
+import { Prover } from './vote_aggregator/prover.js';
 import {
   MerkleMapExtended,
   VoterData,
   VotingPeriod,
-} from './vote_aggregator/lib';
+} from './vote_aggregator/lib.js';
 
 const RecursiveVoteProof_ = ZkProgram.Proof(
   Prover(new MerkleMap(), MerkleMapExtended<VoterData>())

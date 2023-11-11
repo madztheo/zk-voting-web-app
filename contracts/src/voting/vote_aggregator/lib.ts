@@ -24,7 +24,7 @@ export const CANDIDATES = [
 export class Election extends Struct({
   title: String,
   id: Field,
-  candidates: Provable.Array(Field, 8),
+  candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
 }) {}
 
 export class StateTransition extends Struct({
@@ -36,10 +36,10 @@ export class StateTransition extends Struct({
   electionId: Field,
   result: {
     before: {
-      candidates: Provable.Array(Field, 8),
+      candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
     },
     after: {
-      candidates: Provable.Array(Field, 8),
+      candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
     },
   },
 }) {}
@@ -185,10 +185,7 @@ export function calculateNullifierRootTransition(
 export function calculateVotes(votes: Vote[]) {
   const getCandidateCount = (id: Field) => {
     return votes.reduce((acc, val) => {
-      if (val.candidateId.equals(id)) {
-        return acc.add(Field(1));
-      }
-      return acc;
+      return Provable.if(val.candidateId.equals(id), acc.add(Field(1)), acc);
     }, Field(0));
   };
 

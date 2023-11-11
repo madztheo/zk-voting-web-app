@@ -13,14 +13,14 @@ import {
   StateTransition,
   Vote,
   calculateVotes,
-} from './lib';
+} from './lib.js';
 
 export function Prover(
   nullifierTree: MerkleMap,
   voterData: ReturnType<typeof MerkleMapExtended>
 ) {
   return ZkProgram({
-    name: '',
+    name: 'VoteAggregator',
     publicInput: StateTransition,
     methods: {
       baseCase: {
@@ -55,10 +55,10 @@ export function Prover(
 
             /*let voteCandidateId = vote.candidate.id;
             voteCandidateId.assertNotEquals(Field(0));*/
-
-            // we aggregate the results for this single vote
-            candidatesCount = calculateVotes([vote]);
           }
+
+          // we aggregate the results for this single vote
+          candidatesCount = calculateVotes(votes);
 
           // we add results that we got to the ones that we started with - sum'ing them up to the final result
           // we constraint the votes to the final result
@@ -113,11 +113,8 @@ function checkVoterEligibility(
   let membershipProof = Provable.witness(MerkleMapWitness, () => {
     return voterData.getWitness(Poseidon.hash(vote.voter.toFields()));
   });
-  let weight = Provable.witness(Field, () => {
-    return (voterData.get(Poseidon.hash(vote.voter.toFields())) as any).weight;
-  });
   let [root] = membershipProof.computeRootAndKey(
-    Poseidon.hash(vote.voter.toFields().concat(weight))
+    Poseidon.hash(vote.voter.toFields())
   );
   return root.equals(publicInput.voterDataRoot);
 }

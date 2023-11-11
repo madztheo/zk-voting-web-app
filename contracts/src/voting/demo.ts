@@ -9,9 +9,9 @@ import {
   VoterData,
   calculateNullifierRootTransition,
   calculateVotes,
-} from './vote_aggregator/lib';
+} from './vote_aggregator/lib.js';
 
-import { Prover } from './vote_aggregator/prover';
+import { Prover } from './vote_aggregator/prover.js';
 
 console.log('generating three random entries..');
 
