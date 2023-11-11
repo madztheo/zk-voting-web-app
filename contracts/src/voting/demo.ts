@@ -1,4 +1,13 @@
-import { Field, MerkleMap, Poseidon, PrivateKey, Signature } from 'o1js';
+import {
+  AccountUpdate,
+  Field,
+  MerkleMap,
+  Mina,
+  Poseidon,
+  PrivateKey,
+  PublicKey,
+  Signature,
+} from 'o1js';
 
 import {
   CANDIDATES,
@@ -12,6 +21,7 @@ import {
 } from './vote_aggregator/lib.js';
 
 import { Prover } from './vote_aggregator/prover.js';
+import { SettlementContract } from './contract.js';
 
 console.log('generating three random entries..');
 
@@ -140,3 +150,40 @@ console.log(`result for proposal #${election.id}, ${election.title}:\n`);
 CANDIDATES.map((c, i) => {
   console.log(`${c}: ${pi.publicInput.result.after.candidates[i].toString()}`);
 });
+
+/*let deployerAccount: PublicKey,
+  deployerKey: PrivateKey,
+  senderAccount: PublicKey,
+  senderKey: PrivateKey,
+  zkAppAddress: PublicKey,
+  zkAppPrivateKey: PrivateKey,
+  zkApp: SettlementContract;
+
+await SettlementContract.compile();
+
+const Local = Mina.LocalBlockchain({ proofsEnabled: true });
+Mina.setActiveInstance(Local);
+({ privateKey: deployerKey, publicKey: deployerAccount } =
+  Local.testAccounts[0]);
+({ privateKey: senderKey, publicKey: senderAccount } = Local.testAccounts[1]);
+zkAppPrivateKey = PrivateKey.random();
+zkAppAddress = zkAppPrivateKey.toPublicKey();
+zkApp = new SettlementContract(zkAppAddress);
+
+console.log('Deploying Settlement contract...');
+const txn = await Mina.transaction(deployerAccount, () => {
+  AccountUpdate.fundNewAccount(deployerAccount);
+  zkApp.deploy();
+});
+await txn.prove();
+// this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
+await txn.sign([deployerKey, zkAppPrivateKey]).send();
+console.log('Settlement contract deployed...');
+
+const verifTx = await Mina.transaction(senderAccount, () => {
+  zkApp.verifyVoteBatch(pi);
+});
+
+await verifTx.prove();
+await verifTx.sign([senderKey]).send();
+console.log('Proof verified!');*/

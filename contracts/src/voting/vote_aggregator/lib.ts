@@ -12,7 +12,7 @@ import {
 
 export const CANDIDATES = [
   'Elizabeth',
-  'Jonatha',
+  'Jonathan',
   'Kevin',
   'Maria',
   'Paul',

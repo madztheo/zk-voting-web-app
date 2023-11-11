@@ -1,4 +1,4 @@
-import {
+/*import {
   PublicKey,
   Field,
   MerkleMap,
@@ -8,7 +8,7 @@ import {
 } from 'o1js';
 import { MerkleMapExtended, Vote, VoterData } from './lib';
 
-/*function Voting({
+function Voting({
   proposalTitle,
   proposalId,
   feePayer,
@@ -103,5 +103,4 @@ import { MerkleMapExtended, Vote, VoterData } from './lib';
       });
     },
   };
-}
-*/
+}*/
