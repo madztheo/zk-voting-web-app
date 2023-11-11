@@ -31,7 +31,7 @@ export function Prover(
           let tempRoot = publicInput.nullifier.before;
 
           // we accumulate the results of our three votes - obviously we start with 0
-          let candidatesCount: Field[] = Array(8).fill(Field(0));
+          let candidatesCount: Field[] = Array(4).fill(Field(0));
 
           // we go through each vote
           for (let i = 0; i < 3; i++) {

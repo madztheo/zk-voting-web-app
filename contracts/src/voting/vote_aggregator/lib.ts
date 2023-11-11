@@ -24,7 +24,7 @@ export const CANDIDATES = [
 export class Election extends Struct({
   title: String,
   id: Field,
-  candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
+  candidates: [Field, Field, Field, Field],
 }) {}
 
 export class StateTransition extends Struct({
@@ -36,10 +36,10 @@ export class StateTransition extends Struct({
   electionId: Field,
   result: {
     before: {
-      candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
+      candidates: [Field, Field, Field, Field],
     },
     after: {
-      candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
+      candidates: [Field, Field, Field, Field],
     },
   },
 }) {}
@@ -189,7 +189,7 @@ export function calculateVotes(votes: Vote[]) {
     }, Field(0));
   };
 
-  return Array(8)
+  return Array(4)
     .fill(0)
     .map((_, i) => getCandidateCount(Field(i)));
 }

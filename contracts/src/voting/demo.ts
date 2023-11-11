@@ -58,7 +58,7 @@ console.log('prover compiled!');
 let election = new Election({
   title: 'The Cat',
   id: Field(123456), // this should be unique to prevent replay attacks
-  candidates: Array(8)
+  candidates: Array(4)
     .fill(Field(0))
     .map((v) => Field(v)),
 });
@@ -72,12 +72,12 @@ let voterDataRoot = VoterDataTree.getRoot();
 console.log('generating three votes..');
 let v1 = new Vote({
   authorization: Signature.create(priv, [
-    Field(1), // Candidate ID
+    Field(0), // Candidate ID
     election.id, // the proposal id, by signing it we prevent replay attacks
     voterDataRoot, // match the predefined voter data
   ]),
   // the values exist twice, because above we just sign them
-  candidateId: Field(1),
+  candidateId: Field(0),
   electionId: election.id,
   voter: priv.toPublicKey(),
   voterDataRoot: voterDataRoot,
@@ -97,11 +97,11 @@ let v2 = new Vote({
 
 let v3 = new Vote({
   authorization: Signature.create(priv3, [
-    Field(5), // Candidate ID
+    Field(3), // Candidate ID
     election.id,
     voterDataRoot,
   ]),
-  candidateId: Field(5),
+  candidateId: Field(3),
   electionId: election.id,
   voter: priv3.toPublicKey(),
   voterDataRoot: voterDataRoot,
@@ -129,7 +129,7 @@ let st = new StateTransition({
   result: {
     // we obviously start with 0 - 0 - 0 with a fresh proposal
     before: {
-      candidates: Array(8)
+      candidates: Array(4)
         .fill(Field(0))
         .map((v) => Field(v)),
     },
@@ -147,7 +147,7 @@ pi.verify();
 console.log('votes valid!');
 console.log(`result for proposal #${election.id}, ${election.title}:\n`);
 
-CANDIDATES.map((c, i) => {
+CANDIDATES.slice(0, 4).map((c, i) => {
   console.log(`${c}: ${pi.publicInput.result.after.candidates[i].toString()}`);
 });
 

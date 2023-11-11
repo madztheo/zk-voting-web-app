@@ -17,21 +17,21 @@ import {
 } from './vote_aggregator/lib.js';
 
 const RecursiveVoteProof_ = ZkProgram.Proof(
-  Prover(new MerkleMap(), MerkleMapExtended<VoterData>())
+  await Prover(new MerkleMap(), MerkleMapExtended<VoterData>())
 );
 class RecursiveVoteProof extends RecursiveVoteProof_ {}
 
 class ElectionPure extends Struct({
   id: Field,
   // we can add as many or as less options as we want
-  candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
+  candidates: [Field, Field, Field, Field],
 }) {}
 
 export class SettlementContract extends SmartContract {
   // this is the proposal that we are voting on
   @state(ElectionPure) election = State<ElectionPure>();
-  // just some "meta data" to guide the vote - start, end, ..
-  @state(VotingPeriod) votingPeriod = State<VotingPeriod>();
+  // Disable voting period as a quick fix to storage limit
+  //@state(VotingPeriod) votingPeriod = State<VotingPeriod>();
 
   @state(Field) nullifierRoot = State<Field>();
   @state(Field) voterDataRoot = State<Field>();
@@ -40,18 +40,9 @@ export class SettlementContract extends SmartContract {
     super.init();
     this.election.set({
       id: Field(0),
-      candidates: [
-        Field(0),
-        Field(0),
-        Field(0),
-        Field(0),
-        Field(0),
-        Field(0),
-        Field(0),
-        Field(0),
-      ],
+      candidates: [Field(0), Field(0), Field(0), Field(0)],
     });
-    this.votingPeriod.set({
+    /*this.votingPeriod.set({
       electionPeriod: {
         start: UInt32.from(0),
         end: UInt32.from(10),
@@ -60,7 +51,7 @@ export class SettlementContract extends SmartContract {
         start: UInt32.from(10),
         end: UInt32.from(5),
       },
-    });
+    });*/
   }
 
   @method verifyVoteBatch(pi: RecursiveVoteProof) {
@@ -69,23 +60,23 @@ export class SettlementContract extends SmartContract {
     this.election.assertEquals(election);
 
     // "fetch" the on-chain voting period data
-    let votingPeriod = this.votingPeriod.get();
+    /*let votingPeriod = this.votingPeriod.get();
     this.votingPeriod.assertEquals(votingPeriod);
 
     // "fetch" the on-chain network state
     let blockchainLength = this.network.blockchainLength.get();
-    this.network.blockchainLength.assertEquals(blockchainLength);
+    this.network.blockchainLength.assertEquals(blockchainLength);*/
 
     // "fetch" the on-chain nullifier root
     let nullifierRoot = this.nullifierRoot.get();
-    this.nullifierRoot.get().assertEquals(nullifierRoot);
+    this.nullifierRoot.assertEquals(nullifierRoot);
 
     // "fetch" the on-chain nullifier root
     let voterDataRoot = this.voterDataRoot.get();
-    this.voterDataRoot.get().assertEquals(voterDataRoot);
+    this.voterDataRoot.assertEquals(voterDataRoot);
 
     // check that the voting period is over, and we can only submit proofs after the voting phase
-    blockchainLength.assertGreaterThanOrEqual(votingPeriod.electionPeriod.end);
+    //blockchainLength.assertGreaterThanOrEqual(votingPeriod.electionPeriod.end);
 
     /*
       Proofs have public and private inputs. The private inputs are only accessible to the user who generates the proof,
@@ -139,7 +130,7 @@ export class SettlementContract extends SmartContract {
     this.nullifierRoot.set(pi.publicInput.nullifier.after);
   }
 
-  @method challengeResult(pi: RecursiveVoteProof) {
+  /*@method challengeResult(pi: RecursiveVoteProof) {
     // "fetch" the on-chain proposal data
     let election = this.election.get();
     this.election.assertEquals(election);
@@ -164,5 +155,5 @@ export class SettlementContract extends SmartContract {
     pi.verify();
 
     // ..
-  }
+  }*/
 }
