@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import styles from "./index.module.scss";
-import keyConfig from "@/contracts/keys/berkeley.json";
 import { wait } from "@/lib/client-side/utils";
 import type ZkappWorkerClient from "../zkappWorkerClient";
 import { Button } from "@/components/button/Button";
@@ -112,7 +111,9 @@ export default function Content() {
           "https://proxy.berkeley.minaexplorer.com/graphql"
         );
         Mina.setActiveInstance(Berkeley);
-        const zkApp = new Vote(PublicKey.fromBase58(keyConfig.publicKey));
+        const zkApp = new Vote(
+          PublicKey.fromBase58(process.env.NEXT_PUBLIC_ZK_APP_PUBLIC_KEY!)
+        );
         const ballot = await zkApp.ballot.fetch();
         if (ballot) {
           setElectionResults({
