@@ -152,15 +152,12 @@ export default function Content() {
         await zkappWorkerClient.compileContract();
         console.log("zkApp compiled");
 
-        let zkappPublicKeyImported = "";
-        // Will fail on deployment otherwise since we don't commit the keys
-        if (process.env.NEXT_PUBLIC_ENV === "production") {
-          zkappPublicKeyImported = process.env.NEXT_PUBLIC_ZK_APP_PUBLIC_KEY!;
-        } else {
-          zkappPublicKeyImported = (
+        const zkappPublicKeyImported =
+          process.env.NEXT_PUBLIC_ZK_APP_PUBLIC_KEY!;
+
+        /*const zkappPublicKeyImported = (
             await import("@/contracts/keys/berkeley.json")
-          ).publicKey;
-        }
+          ).publicKey;*/
 
         const zkappPublicKey = PublicKey.fromBase58(zkappPublicKeyImported);
         await zkappWorkerClient.initZkappInstance(zkappPublicKey);
