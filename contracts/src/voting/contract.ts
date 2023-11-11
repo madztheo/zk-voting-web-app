@@ -21,17 +21,15 @@ const RecursiveVoteProof_ = ZkProgram.Proof(
 );
 class RecursiveVoteProof extends RecursiveVoteProof_ {}
 
-class ProposalPure extends Struct({
+class ElectionPure extends Struct({
   id: Field,
   // we can add as many or as less options as we want
-  yes: Field,
-  no: Field,
-  abstained: Field,
+  candidates: [Field, Field, Field, Field, Field, Field, Field, Field],
 }) {}
 
 export class SettlementContract extends SmartContract {
   // this is the proposal that we are voting on
-  @state(ProposalPure) proposal = State<ProposalPure>();
+  @state(ElectionPure) election = State<ElectionPure>();
   // just some "meta data" to guide the vote - start, end, ..
   @state(VotingPeriod) votingPeriod = State<VotingPeriod>();
 
@@ -40,11 +38,18 @@ export class SettlementContract extends SmartContract {
 
   @method init() {
     super.init();
-    this.proposal.set({
-      abstained: Field(0),
+    this.election.set({
       id: Field(0),
-      no: Field(0),
-      yes: Field(0),
+      candidates: [
+        Field(0),
+        Field(0),
+        Field(0),
+        Field(0),
+        Field(0),
+        Field(0),
+        Field(0),
+        Field(0),
+      ],
     });
     this.votingPeriod.set({
       electionPeriod: {
@@ -60,8 +65,8 @@ export class SettlementContract extends SmartContract {
 
   @method verifyVoteBatch(pi: RecursiveVoteProof) {
     // "fetch" the on-chain proposal data
-    let proposal = this.proposal.get();
-    this.proposal.assertEquals(proposal);
+    let election = this.election.get();
+    this.election.assertEquals(election);
 
     // "fetch" the on-chain voting period data
     let votingPeriod = this.votingPeriod.get();
@@ -90,7 +95,7 @@ export class SettlementContract extends SmartContract {
       That means, we have to match our off-chain proof to our on-chain state. And we want to only verify proofs that are 
       truly for our proposal. for that, we use the proposalId! We say "you can only verify this proof if it is for our proposal, with proposalId #123"
       */
-    proposal.id.assertEquals(pi.publicInput.proposalId);
+    election.id.assertEquals(pi.publicInput.electionId);
 
     // we also have to check that the voter data actually matches the expected data!
     voterDataRoot.assertEquals(pi.publicInput.voterDataRoot);
@@ -109,9 +114,9 @@ export class SettlementContract extends SmartContract {
       thats when we want to make sure that we don't double count votes ad the transition is valid
       */
     let resultsBefore = pi.publicInput.result.before;
-    proposal.yes.assertEquals(resultsBefore.yes);
-    proposal.no.assertEquals(resultsBefore.no);
-    proposal.abstained.assertEquals(resultsBefore.abstained);
+    for (let i = 0; i < resultsBefore.candidates.length; i++) {
+      resultsBefore.candidates[i].assertEquals(election.candidates[i]);
+    }
 
     /*
       same goes for the nullifier root!
@@ -122,12 +127,12 @@ export class SettlementContract extends SmartContract {
 
     // we apply the votes to our on-chain proposal
     let resultsAfter = pi.publicInput.result.after;
-    proposal.yes = resultsAfter.yes;
-    proposal.no = resultsAfter.no;
-    proposal.abstained = resultsAfter.abstained;
+    for (let i = 0; i < resultsAfter.candidates.length; i++) {
+      election.candidates[i] = resultsAfter.candidates[i];
+    }
 
     // finally we update our on-chain state with the latest result!
-    this.proposal.set(proposal);
+    this.election.set(election);
 
     // we update our new nullifier root!
     // the proof says a) we aggregates all results and b) the nullifier root changes based on the results and votes
@@ -136,8 +141,8 @@ export class SettlementContract extends SmartContract {
 
   @method challengeResult(pi: RecursiveVoteProof) {
     // "fetch" the on-chain proposal data
-    let proposal = this.proposal.get();
-    this.proposal.assertEquals(proposal);
+    let election = this.election.get();
+    this.election.assertEquals(election);
 
     // "fetch" the on-chain voting period data
     let votingPeriod = this.votingPeriod.get();

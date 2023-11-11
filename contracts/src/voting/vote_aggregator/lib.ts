@@ -10,25 +10,21 @@ import {
   Provable,
 } from 'o1js';
 
-export class Candidate extends Struct({
-  id: Field,
-  name: String,
-  count: Field,
-}) {}
+export const CANDIDATES = [
+  'Elizabeth',
+  'Jonatha',
+  'Kevin',
+  'Maria',
+  'Paul',
+  'Sam',
+  'Simon',
+  'Stephany',
+];
 
 export class Election extends Struct({
   title: String,
   id: Field,
-  candidates: [
-    Candidate,
-    Candidate,
-    Candidate,
-    Candidate,
-    Candidate,
-    Candidate,
-    Candidate,
-    Candidate,
-  ],
+  candidates: Provable.Array(Field, 8),
 }) {}
 
 export class StateTransition extends Struct({
@@ -37,31 +33,13 @@ export class StateTransition extends Struct({
     before: Field,
     after: Field,
   },
-  proposalId: Field,
+  electionId: Field,
   result: {
     before: {
-      candidates: [
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-      ],
+      candidates: Provable.Array(Field, 8),
     },
     after: {
-      candidates: [
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-        Candidate,
-      ],
+      candidates: Provable.Array(Field, 8),
     },
   },
 }) {}
@@ -98,7 +76,7 @@ export type JSONVote = {
     s: string;
   };
   voterDataRoot: string;
-  candidate: { id: string; name: string; count: string };
+  candidateId: string;
   electionId: string;
 };
 
@@ -109,7 +87,7 @@ export function validateJSONVote(json: unknown): json is JSONVote {
     'voter' in json &&
     'authorization' in json &&
     'voterDataRoot' in json &&
-    'candidates' in json &&
+    'candidateId' in json &&
     'electionId' in json
   );
 }
@@ -119,21 +97,21 @@ export class Vote extends Struct({
   authorization: Signature,
   voterDataRoot: Field,
   electionId: Field,
-  candidate: Candidate,
+  candidateId: Field,
 }) {
   fromJSON(json: JSONVote): Vote {
     return new Vote({
       voter: PublicKey.fromBase58(json.voter),
       authorization: Signature.fromJSON(json.authorization),
-      voterDataRoot: Field(this.voterDataRoot),
-      candidate: Candidate.fromJSON(json.candidate),
+      voterDataRoot: Field(json.voterDataRoot),
+      candidateId: Field(json.candidateId),
       electionId: Field(json.electionId),
     });
   }
 
   verifySignature(publicKey: PublicKey) {
     return this.authorization.verify(publicKey, [
-      this.candidate.id,
+      this.candidateId,
       this.electionId,
       this.voterDataRoot,
     ]);
@@ -205,17 +183,18 @@ export function calculateNullifierRootTransition(
 }
 
 export function calculateVotes(votes: Vote[]) {
-  let candidatesCount: {
-    [id: string]: Field;
-  } = {};
-
-  votes.forEach((v, i) => {
-    candidatesCount[v.candidate.id.toString()].add(v.candidate.count);
-  });
-
-  return {
-    candidatesCount,
+  const getCandidateCount = (id: Field) => {
+    return votes.reduce((acc, val) => {
+      if (val.candidateId.equals(id)) {
+        return acc.add(Field(1));
+      }
+      return acc;
+    }, Field(0));
   };
+
+  return Array(8)
+    .fill(0)
+    .map((_, i) => getCandidateCount(Field(i)));
 }
 
 export function validateVote(
@@ -235,7 +214,7 @@ export function validateVote(
 
   let payload = vote.voter
     .toFields()
-    .concat([vote.candidate.id, vote.voterDataRoot]);
+    .concat([vote.candidateId, vote.voterDataRoot]);
   let isValid = vote.authorization.verify(vote.voter, payload).toBoolean();
 
   if (isValid) {

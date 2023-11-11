@@ -7,16 +7,21 @@ import {
   Provable,
 } from 'o1js';
 
-import { MerkleMapExtended, Nullifier, StateTransition, Vote } from './lib';
-export { Prover };
+import {
+  MerkleMapExtended,
+  Nullifier,
+  StateTransition,
+  Vote,
+  calculateVotes,
+} from './lib';
 
-function Prover(
+export function Prover(
   nullifierTree: MerkleMap,
   voterData: ReturnType<typeof MerkleMapExtended>
 ) {
   return ZkProgram({
+    name: '',
     publicInput: StateTransition,
-
     methods: {
       baseCase: {
         privateInputs: [Provable.Array(Vote, 3)],
@@ -26,9 +31,7 @@ function Prover(
           let tempRoot = publicInput.nullifier.before;
 
           // we accumulate the results of our three votes - obviously we start with 0
-          let yes = Field(0);
-          let no = Field(0);
-          let abstained = Field(0);
+          let candidatesCount: Field[] = Array(8).fill(Field(0));
 
           // we go through each vote
           for (let i = 0; i < 3; i++) {
@@ -42,36 +45,28 @@ function Prover(
             );
 
             // making sure the voter actually voted for this proposal, preventing replay attacks
-            publicInput.proposalId.assertEquals(
-              vote.proposalId,
-              'Vote proposalId does not match actual proposalId!'
+            publicInput.electionId.assertEquals(
+              vote.electionId,
+              'Vote electionId does not match actual electionId!'
             );
 
             // check that no nullifier has been set already - if all is good, set the nullifier!
             tempRoot = checkAndSetNullifier(vote, nullifierTree, tempRoot);
 
-            // we do this to ensure no one is casting multiple votes
-            // all votes of a voter should only sum up to 1, because we cant cast two votes
-            let voteCount = vote.yes.add(vote.no).add(vote.abstained);
-            voteCount.assertEquals(Field(1));
+            /*let voteCandidateId = vote.candidate.id;
+            voteCandidateId.assertNotEquals(Field(0));*/
 
             // we aggregate the results for this single vote
-            yes = yes.add(vote.yes);
-            no = no.add(vote.no);
-            abstained = abstained.add(vote.abstained);
+            candidatesCount = calculateVotes([vote]);
           }
 
           // we add results that we got to the ones that we started with - sum'ing them up to the final result
           // we constraint the votes to the final result
-          publicInput.result.after.yes.assertEquals(
-            yes.add(publicInput.result.before.yes)
-          );
-          publicInput.result.after.no.assertEquals(
-            no.add(publicInput.result.before.no)
-          );
-          publicInput.result.after.abstained.assertEquals(
-            abstained.add(publicInput.result.before.abstained)
-          );
+          for (let i = 0; i < candidatesCount.length; i++) {
+            publicInput.result.after.candidates[i].assertEquals(
+              candidatesCount[i].add(publicInput.result.before.candidates[i])
+            );
+          }
 
           // we make sure that the final nullifier root is valid
           tempRoot.assertEquals(
@@ -81,7 +76,6 @@ function Prover(
         },
       },
     },
-    name: '',
   });
 }
 
@@ -90,7 +84,7 @@ function checkAndSetNullifier(
   nullifierTree: MerkleMap,
   nullifierRoot: Field
 ) {
-  let expectedNullifier = Nullifier(vote.voter, vote.proposalId);
+  let expectedNullifier = Nullifier(vote.voter, vote.electionId);
 
   let nullifierWitness = Provable.witness(MerkleMapWitness, () => {
     return nullifierTree.getWitness(expectedNullifier);
