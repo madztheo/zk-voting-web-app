@@ -5,6 +5,7 @@ import {
   Field,
   ZkProgram,
   Provable,
+  SelfProof,
 } from 'o1js';
 
 import {
@@ -26,57 +27,79 @@ export function Prover(
       baseCase: {
         privateInputs: [Provable.Array(Vote, 3)],
         method(publicInput: StateTransition, votes: Vote[]) {
-          // because we batch votes, we have to transition our nullifier root
-          // from n_v1 -> n_v2 -> n_v3, thats why we store it temporary
-          let tempRoot = publicInput.nullifier.before;
+          processStateTransition(nullifierTree, voterData, publicInput, votes);
+        },
+      },
+      next: {
+        privateInputs: [SelfProof, Provable.Array(Vote, 3)],
+        method(
+          publicInput: StateTransition,
+          earlierProof: SelfProof<StateTransition, void>,
+          votes: Vote[]
+        ) {
+          // Verify the previous proof
+          earlierProof.verify();
 
-          // we accumulate the results of our three votes - obviously we start with 0
-          let candidatesCount: Field[] = Array(4).fill(Field(0));
-
-          // we go through each vote
-          for (let i = 0; i < 3; i++) {
-            let vote = votes[i];
-            // verifying signature, obviously!
-            vote.verifySignature(vote.voter).assertTrue();
-
-            // we check if the voter is actually part of the list of eligible voters that we defined at the beginning
-            checkVoterEligibility(vote, voterData, publicInput).assertTrue(
-              'Voter is not an eligible voter!'
-            );
-
-            // making sure the voter actually voted for this proposal, preventing replay attacks
-            publicInput.electionId.assertEquals(
-              vote.electionId,
-              'Vote electionId does not match actual electionId!'
-            );
-
-            // check that no nullifier has been set already - if all is good, set the nullifier!
-            tempRoot = checkAndSetNullifier(vote, nullifierTree, tempRoot);
-
-            /*let voteCandidateId = vote.candidate.id;
-            voteCandidateId.assertNotEquals(Field(0));*/
-          }
-
-          // we aggregate the results for this single vote
-          candidatesCount = calculateVotes(votes);
-
-          // we add results that we got to the ones that we started with - sum'ing them up to the final result
-          // we constraint the votes to the final result
-          for (let i = 0; i < candidatesCount.length; i++) {
-            publicInput.result.after.candidates[i].assertEquals(
-              candidatesCount[i].add(publicInput.result.before.candidates[i])
-            );
-          }
-
-          // we make sure that the final nullifier root is valid
-          tempRoot.assertEquals(
-            publicInput.nullifier.after,
-            'Invalid state transition!'
-          );
+          processStateTransition(nullifierTree, voterData, publicInput, votes);
         },
       },
     },
   });
+}
+
+function processStateTransition(
+  nullifierTree: MerkleMap,
+  voterData: ReturnType<typeof MerkleMapExtended>,
+  publicInput: StateTransition,
+  votes: Vote[]
+) {
+  // because we batch votes, we have to transition our nullifier root
+  // from n_v1 -> n_v2 -> n_v3, thats why we store it temporary
+  let tempRoot = publicInput.nullifier.before;
+
+  // we accumulate the results of our three votes - obviously we start with 0
+  let candidatesCount: Field[] = Array(4).fill(Field(0));
+
+  // we go through each vote
+  for (let i = 0; i < 3; i++) {
+    let vote = votes[i];
+    // verifying signature, obviously!
+    vote.verifySignature(vote.voter).assertTrue();
+
+    // we check if the voter is actually part of the list of eligible voters that we defined at the beginning
+    checkVoterEligibility(vote, voterData, publicInput).assertTrue(
+      'Voter is not an eligible voter!'
+    );
+
+    // making sure the voter actually voted for this proposal, preventing replay attacks
+    publicInput.electionId.assertEquals(
+      vote.electionId,
+      'Vote electionId does not match actual electionId!'
+    );
+
+    // check that no nullifier has been set already - if all is good, set the nullifier!
+    tempRoot = checkAndSetNullifier(vote, nullifierTree, tempRoot);
+
+    /*let voteCandidateId = vote.candidate.id;
+            voteCandidateId.assertNotEquals(Field(0));*/
+  }
+
+  // we aggregate the results for this single vote
+  candidatesCount = calculateVotes(votes);
+
+  // we add results that we got to the ones that we started with - sum'ing them up to the final result
+  // we constraint the votes to the final result
+  for (let i = 0; i < candidatesCount.length; i++) {
+    publicInput.result.after.candidates[i].assertEquals(
+      candidatesCount[i].add(publicInput.result.before.candidates[i])
+    );
+  }
+
+  // we make sure that the final nullifier root is valid
+  tempRoot.assertEquals(
+    publicInput.nullifier.after,
+    'Invalid state transition!'
+  );
 }
 
 function checkAndSetNullifier(
