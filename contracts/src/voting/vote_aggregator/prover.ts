@@ -20,7 +20,7 @@ export function Prover(
   nullifierTree: MerkleMap,
   voterData: ReturnType<typeof MerkleMapExtended>
 ) {
-  return ZkProgram({
+  const voteAggregator = ZkProgram({
     name: 'VoteAggregator',
     publicInput: StateTransition,
     methods: {
@@ -59,6 +59,8 @@ export function Prover(
       },
     },
   });
+
+  return voteAggregator;
 }
 
 function processStateTransition(

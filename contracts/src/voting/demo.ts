@@ -21,7 +21,7 @@ import {
 } from './vote_aggregator/lib.js';
 
 import { Prover } from './vote_aggregator/prover.js';
-import { SettlementContract } from './contract.js';
+import { getContractClass } from './contract.js';
 
 console.log('generating three random entries..');
 
@@ -151,13 +151,15 @@ CANDIDATES.slice(0, 4).map((c, i) => {
   console.log(`${c}: ${pi.publicInput.result.after.candidates[i].toString()}`);
 });
 
-/*let deployerAccount: PublicKey,
+const SettlementContract = getContractClass(VoteProver);
+
+let deployerAccount: PublicKey,
   deployerKey: PrivateKey,
   senderAccount: PublicKey,
   senderKey: PrivateKey,
   zkAppAddress: PublicKey,
   zkAppPrivateKey: PrivateKey,
-  zkApp: SettlementContract;
+  zkApp: any;
 
 await SettlementContract.compile();
 
@@ -174,6 +176,7 @@ console.log('Deploying Settlement contract...');
 const txn = await Mina.transaction(deployerAccount, () => {
   AccountUpdate.fundNewAccount(deployerAccount);
   zkApp.deploy();
+  zkApp.setElectionDetails(election.id, voterDataRoot, rootBefore);
 });
 await txn.prove();
 // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
@@ -186,4 +189,4 @@ const verifTx = await Mina.transaction(senderAccount, () => {
 
 await verifTx.prove();
 await verifTx.sign([senderKey]).send();
-console.log('Proof verified!');*/
+console.log('Proof verified!');
