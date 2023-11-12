@@ -37,7 +37,21 @@ export function Prover(
           earlierProof: SelfProof<StateTransition, void>,
           votes: Vote[]
         ) {
-          // Verify the previous proof
+          // Check the details of the previous proof matches the current state
+          earlierProof.publicInput.nullifier.after.assertEquals(
+            publicInput.nullifier.before
+          );
+          earlierProof.publicInput.result.after.candidates.map((v, i) =>
+            v.assertEquals(publicInput.result.before.candidates[i])
+          );
+          earlierProof.publicInput.electionId.assertEquals(
+            publicInput.electionId
+          );
+          earlierProof.publicInput.voterDataRoot.assertEquals(
+            publicInput.voterDataRoot
+          );
+
+          // Verify the previous proof itself
           earlierProof.verify();
 
           processStateTransition(nullifierTree, voterData, publicInput, votes);
