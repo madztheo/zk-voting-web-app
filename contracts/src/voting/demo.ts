@@ -23,38 +23,37 @@ import {
 import { Prover } from './vote_aggregator/prover.js';
 import { getContractClass } from './contract.js';
 
-console.log('generating three random entries..');
+console.log('Generating six random private keys..');
+// Generate 6 random private keys
+const privKeys = Array(6)
+  .fill(0)
+  .map(() => PrivateKey.random());
 
-let priv = PrivateKey.random();
-let priv2 = PrivateKey.random();
-let priv3 = PrivateKey.random();
-
+// Initialize the voter data tree to keep track of the eligible voters
 const VoterDataTree = MerkleMapExtended<VoterData>();
 
-// we add our list of eligible voters to the voter data merkle tree
-let vd = new VoterData({ publicKey: priv.toPublicKey() });
-let vd2 = new VoterData({ publicKey: priv2.toPublicKey() });
-let vd3 = new VoterData({ publicKey: priv3.toPublicKey() });
-VoterDataTree.set(Poseidon.hash(priv.toPublicKey().toFields()), vd);
-VoterDataTree.set(Poseidon.hash(priv2.toPublicKey().toFields()), vd2);
-VoterDataTree.set(Poseidon.hash(priv3.toPublicKey().toFields()), vd3);
+// We had the eligible voters to the tree (from the previously generated private keys)
+privKeys.forEach((priv) => {
+  let vd = new VoterData({ publicKey: priv.toPublicKey() });
+  VoterDataTree.set(Poseidon.hash(priv.toPublicKey().toFields()), vd);
+  return vd;
+});
 
 console.log(
-  'added three dummy voters, root: ',
+  `${privKeys.length} dummy voters added, root: `,
   VoterDataTree.getRoot().toString()
 );
 
-// this is a bit annoying but will do for now - NullifierTreeSync stays in sync with all transitions while NullifierTreeProver is only being used inside the prover
 const NullifierTreeTemp = new MerkleMap();
 const NullifierTreeProver = new MerkleMap();
 
-console.log('generating prover..');
+console.log('Generating prover...');
 const VoteProver = Prover(NullifierTreeProver, VoterDataTree);
-console.log('compiling prover..');
+console.log('Compiling prover...');
 await VoteProver.compile();
-console.log('prover compiled!');
+console.log('Prover compiled!');
 
-// creating a new proposal - this can also be done on-demand, via an API, etc
+// Creating a new election
 let election = new Election({
   title: 'The Cat',
   id: Field(123456), // this should be unique to prevent replay attacks
@@ -63,71 +62,60 @@ let election = new Election({
     .map((v) => Field(v)),
 });
 
-console.log('created a new election!');
-console.log(`title: ${election.title}
-  id: ${election.id}`);
+console.log('New election created!');
+console.log(`Title: ${election.title}
+  Id: ${election.id}`);
 
 let voterDataRoot = VoterDataTree.getRoot();
 
-console.log('generating three votes..');
-let v1 = new Vote({
-  authorization: Signature.create(priv, [
-    Field(0), // Candidate ID
-    election.id, // the proposal id, by signing it we prevent replay attacks
-    voterDataRoot, // match the predefined voter data
-  ]),
-  // the values exist twice, because above we just sign them
-  candidateId: Field(0),
-  electionId: election.id,
-  voter: priv.toPublicKey(),
-  voterDataRoot: voterDataRoot,
+// Generate a vote for each voter
+console.log('Generating six votes..');
+const votes = privKeys.map((priv, i) => {
+  let v = new Vote({
+    /**
+     * By signing the candidate id and the election id
+     * and verifying this within the proof we prevent the
+     * aggregator from tampering with the vote.
+     * However the aggregator could still simply ignore to count the vote.
+     **/
+    authorization: Signature.create(priv, [
+      Field(i % 4), // Candidate ID
+      election.id, // the election id, by signing it we prevent replay attacks
+      voterDataRoot, // match the predefined voter data
+    ]),
+    candidateId: Field(i % 4),
+    electionId: election.id,
+    voter: priv.toPublicKey(),
+    voterDataRoot: voterDataRoot,
+  });
+  return v;
 });
 
-let v2 = new Vote({
-  authorization: Signature.create(priv2, [
-    Field(2), // Candidate ID
-    election.id,
-    voterDataRoot,
-  ]),
-  candidateId: Field(2),
-  electionId: election.id,
-  voter: priv2.toPublicKey(),
-  voterDataRoot: voterDataRoot,
-});
-
-let v3 = new Vote({
-  authorization: Signature.create(priv3, [
-    Field(3), // Candidate ID
-    election.id,
-    voterDataRoot,
-  ]),
-  candidateId: Field(3),
-  electionId: election.id,
-  voter: priv3.toPublicKey(),
-  voterDataRoot: voterDataRoot,
-});
-
-let votes = [v1, v2, v3];
-
-// we prepare our witnesses for all votes, this is just some auxillary stuff. proving happens later
+/**
+ * Generate the nullifier root at initial state when the election is freshly created
+ * and no votes have been cast yet, along with the nullifier root after the first three votes
+ * have been cast.
+ * */
 let { rootBefore, rootAfter } = calculateNullifierRootTransition(
   NullifierTreeTemp,
-  votes
+  votes.slice(0, 3)
 );
-// we calculate the votes after we aggregate all. again, auxillary things because we have to prove a transition f(votes, s_1) = s_2
-let votesAfter = calculateVotes(votes);
 
-// this is our state transition data structure!
+// Calculate the count for each candidates from the first three votes
+let votesAfter = calculateVotes(votes.slice(0, 3));
+
+// This is our state transition data structure!
 let st = new StateTransition({
   nullifier: {
     before: rootBefore,
     after: rootAfter,
   },
-  // specific for this proposal
+  // Specific for this election
   electionId: election.id,
-  // this is where we aggregate the results
+  // This is where we aggregate the results
   result: {
-    // we obviously start with 0 - 0 - 0 with a fresh proposal
+    // This is the initial state, before any votes have been cast
+    // so we start with all candidates having 0 votes
     before: {
       candidates: Array(4)
         .fill(Field(0))
@@ -140,17 +128,71 @@ let st = new StateTransition({
   voterDataRoot: voterDataRoot,
 });
 
-console.log('proving three votes..');
-// we proof three votes!
-let pi = await VoteProver.baseCase(st, votes);
+console.log('Proving the 3 first votes..');
+// We prove 3 votes!
+let pi = await VoteProver.baseCase(st, votes.slice(0, 3));
+// Verify the proof
 pi.verify();
-console.log('votes valid!');
-console.log(`result for proposal #${election.id}, ${election.title}:\n`);
+console.log('First round of the election valid!');
+// Print the result
+console.log(`Result for election #${election.id}, ${election.title}:\n`);
 
 CANDIDATES.slice(0, 4).map((c, i) => {
   console.log(`${c}: ${pi.publicInput.result.after.candidates[i].toString()}`);
 });
 
+// Calculate the count for each candidates from the next three votes
+let votesCount = calculateVotes(votes.slice(3, 6));
+
+// Calculate the nullifier root after the next three votes
+let { rootAfter: rootAfter2 } = calculateNullifierRootTransition(
+  NullifierTreeTemp,
+  votes.slice(3, 6)
+);
+
+let st2 = new StateTransition({
+  nullifier: {
+    // The starting state is the previously applied state
+    // so we start with the nullifier root after the first three votes
+    before: pi.publicInput.nullifier.after,
+    after: rootAfter2,
+  },
+  // Specific for this election
+  electionId: election.id,
+  // This is where we aggregate the results
+  result: {
+    before: {
+      // The starting state is the previously applied state
+      // so we start with the result after the first three votes
+      candidates: pi.publicInput.result.after.candidates,
+    },
+    after: {
+      // We add the count of the next three votes to the previous state
+      candidates: pi.publicInput.result.after.candidates.map((v, i) =>
+        v.add(votesCount[i])
+      ),
+    },
+  },
+  voterDataRoot: voterDataRoot,
+});
+
+// We now prove the next three votes!
+console.log('Proving next three votes...');
+let pi2 = await VoteProver.next(st2, pi, votes.slice(3, 6));
+// Verify the proof
+pi2.verify();
+
+// Print the result
+console.log('Second batch of the election valid!');
+console.log(`Result for election #${election.id}, ${election.title}:\n`);
+
+CANDIDATES.slice(0, 4).map((c, i) => {
+  console.log(`${c}: ${pi2.publicInput.result.after.candidates[i].toString()}`);
+});
+
+// We proceed with the deployment of the settlement contract
+// so that we can verify the proofs on-chain and keep a record
+// of the election directly on-chain
 const SettlementContract = getContractClass(VoteProver);
 
 let deployerAccount: PublicKey,
@@ -161,18 +203,24 @@ let deployerAccount: PublicKey,
   zkAppPrivateKey: PrivateKey,
   zkApp: any;
 
+console.log('Compiling Settlement contract...');
 await SettlementContract.compile();
 
+// Start a local instance of the Mina blockchain
 const Local = Mina.LocalBlockchain({ proofsEnabled: true });
 Mina.setActiveInstance(Local);
+// Get the first two test accounts for deployment and signing
+// subsequent transactions
 ({ privateKey: deployerKey, publicKey: deployerAccount } =
   Local.testAccounts[0]);
 ({ privateKey: senderKey, publicKey: senderAccount } = Local.testAccounts[1]);
+// Generate a random keypair for the settlement contract
 zkAppPrivateKey = PrivateKey.random();
 zkAppAddress = zkAppPrivateKey.toPublicKey();
 zkApp = new SettlementContract(zkAppAddress);
 
 console.log('Deploying Settlement contract...');
+// Deploy the settlement contract and set the election details
 const txn = await Mina.transaction(deployerAccount, () => {
   AccountUpdate.fundNewAccount(deployerAccount);
   zkApp.deploy();
@@ -181,12 +229,29 @@ const txn = await Mina.transaction(deployerAccount, () => {
 await txn.prove();
 // this tx needs .sign(), because `deploy()` adds an account update that requires signature authorization
 await txn.sign([deployerKey, zkAppPrivateKey]).send();
-console.log('Settlement contract deployed...');
+console.log('Settlement contract deployed.');
 
+console.log('Verifying first proof on-chain...');
+// We now verify the first proof on-chain
+// We have to do it proof by proof in order as the contract will need
+// to verify that proof start from the correct state
 const verifTx = await Mina.transaction(senderAccount, () => {
   zkApp.verifyVoteBatch(pi);
 });
+console.log('First proof verified.');
 
 await verifTx.prove();
 await verifTx.sign([senderKey]).send();
-console.log('Proof verified!');
+
+console.log('Verifying second proof on-chain...');
+// We now verify the second proof on-chain
+const verifTx2 = await Mina.transaction(senderAccount, () => {
+  zkApp.verifyVoteBatch(pi2);
+});
+
+await verifTx2.prove();
+await verifTx2.sign([senderKey]).send();
+// We have now successfully verified the two proofs on-chain
+// Our votes are now counted on-chain but each individual vote
+// is kept private from the rest of the network!
+console.log('Proofs all verified!');
